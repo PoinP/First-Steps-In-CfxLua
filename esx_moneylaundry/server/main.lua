@@ -1,10 +1,10 @@
 ESX = nil
 
-local hasLaundryStarted = false
-
 TriggerEvent("esx:getSharedObject", function(obj) ESX = obj end)
 
 ------------------------------ esx_moneylaundry ----------------------------------------
+
+local hasLaundryStarted = false
 
 -- Laundry's logic
 RegisterNetEvent("pnp:startLaundry")
@@ -52,7 +52,7 @@ function startLaundry(source)
     end
     TriggerClientEvent("pnp:updatePrompt", source, _U("laundry_prompt"))
 
-    TriggerClientEvent("pnp:onLaundryFinished", source)
+    TriggerClientEvent("pnp:onFinishedLaundering", source)
     TriggerClientEvent("pnp:notifyPlayer", source, _U("finished"))
 
     hasLaundryStarted = false
