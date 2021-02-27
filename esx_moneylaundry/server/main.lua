@@ -1,26 +1,59 @@
 ESX = nil
 
-TriggerEvent('esx:getSharedObject', function(obj) ESX = obj end)
+local hasLaundryStarted = false
 
-RegisterNetEvent("onServerLaundry")
-AddEventHandler("onServerLaundry", function()
-    xPlayer = ESX.GetPlayerFromId(source)
-    local dirtyMoney = xPlayer.getAccount("black_money").money
+TriggerEvent("esx:getSharedObject", function(obj) ESX = obj end)
 
-    if dirtyMoney < Config.AmountPerLaundry then
-        print("Not enough money! Sorry!") --Add ui notification
-        return
-    end
+------------------------------ esx_moneylaundry ----------------------------------------
 
+-- Laundry's logic
+RegisterNetEvent("pnp:startLaundry")
+Citizen.CreateThread(function()
+    AddEventHandler("pnp:startLaundry", function()
+        xPlayer = ESX.GetPlayerFromId(source)
+        local blackMoney = xPlayer.getAccount("black_money").money
+        local doesPlayerHaveEnoughMoney = blackMoney >= Config.AmountPerLaundry
+
+        if not hasLaundryStarted and doesPlayerHaveEnoughMoney then
+            TriggerClientEvent("pnp:notifyPlayer", source, _U("started_washing" ,Config.AmountPerLaundry))
+            startLaundry(source)
+        elseif not doesPlayerHaveEnoughMoney then
+            TriggerClientEvent("pnp:notifyPlayer", source, _U("not_enough"))
+        elseif hasLaundryStarted then
+            TriggerClientEvent("pnp:notifyPlayer", source, _U("occupied"))
+        end
+    end)
+end)
+
+-- When a player picks up the cleaned money it adds it to his account
+RegisterNetEvent("pnp:onMoneyPickup")
+AddEventHandler("pnp:onMoneyPickup", function(pedId)
+    xPlayer = ESX.GetPlayerFromId(pedId)
+    local cleanMoney = calculateMoneyAfterTax(Config.MinPayout, Config.MaxPayout)
+    TriggerClientEvent("pnp:notifyPlayer", pedId, _U("picked_up", cleanMoney))
+    xPlayer.addMoney(cleanMoney)
+end)
+
+-- Calculates the amount of clean money to give to a player
+function calculateMoneyAfterTax(minMoneyAfterTax, maxMoneyAfterTax)
     math.randomseed(os.time())
+    local moneyAfterTax = math.random(minMoneyAfterTax, maxMoneyAfterTax)
+    return moneyAfterTax
+end
+
+-- Starts the laundry proccess
+function startLaundry(source)
     xPlayer.removeAccountMoney("black_money", Config.AmountPerLaundry)
-    local cleanMoney = math.random(Config.MinPayout, Config.MaxPayout)
 
-    TriggerClientEvent("startLaundry", source, cleanMoney)
-end)
+    hasLaundryStarted = true
+    for i = 1, Config.TimeToLaunder do
+        TriggerClientEvent("pnp:updatePrompt", source, i)
+        Wait(1000)
+    end
+    TriggerClientEvent("pnp:updatePrompt", source, _U("laundry_prompt"))
 
-RegisterNetEvent("laundryFinished")
-AddEventHandler("laundryFinished", function(_source, money)
-    xPlayer = ESX.GetPlayerFromId(_source)
-    xPlayer.addMoney(money)
-end)
+    TriggerClientEvent("pnp:onLaundryFinished", source)
+    TriggerClientEvent("pnp:notifyPlayer", source, _U("finished"))
+
+    hasLaundryStarted = false
+end

@@ -1,19 +1,5 @@
---ToDo Clean the money, then add the clean money to user's inventory(or drop it and force a user to get it)
-
 ESX              = nil
 local PlayerData = {}
-
-local laundryCoords = Config.Location
-local laundryString = Config.LaundryString
-
-local pedCoords
-local distance
-
-local isNear = false
-local hasSoundPlayed = false
-local hasLaundryStarted = false
-
-local didPlayerStartLaunder = false
 
 Citizen.CreateThread(function()
 	while ESX == nil do
@@ -32,109 +18,77 @@ AddEventHandler('esx:setJob', function(job)
   PlayerData.job = job
 end)
 
-RegisterCommand("coord", function(source)
-	print(GetEntityCoords(PlayerPedId()))
-	print(hasLaundryStarted)
-end, false)
+------------------------------ esx_moneylaundry ----------------------------------------
 
---EventHandlers
+local laundryX, laundryY, laundryZ = table.unpack(Config.Location)
 
-RegisterNetEvent("startLaundry")
-AddEventHandler("startLaundry", function(cleanMoney)	
-	for i=1, Config.TimeToLaunder do
-		TriggerEvent("onTimerTicked", i)
-		Wait(1000)
-	end
+local playerCoords = GetEntityCoords(PlayerPedId())
+local distanceToLaundry = Vdist(playerCoords, Config.Location)
+local laundryPrompt = _U("laundry_prompt")
 
-	TriggerEvent("onLaundryFinished", cleanMoney)
-	hasLaundryStarted = false
+-- Used to notify the player of the laundry's status
+RegisterNetEvent("pnp:notifyPlayer")
+AddEventHandler("pnp:notifyPlayer", function(string)
+    notifyPlayer(string)
 end)
 
-AddEventHandler("onTimerTicked", function(num)
-	laundryString = tonumber(num)
+-- Used to update the laundry's prompt
+RegisterNetEvent("pnp:updatePrompt")
+AddEventHandler("pnp:updatePrompt", function(updatedPrompt)
+    laundryPrompt = updatedPrompt
+    print(laundryPrompt)
 end)
 
---Functions
-
+-- Spawns an object(a money bag)
+RegisterNetEvent("pnp:onLaundryFinished")
 Citizen.CreateThread(function()
-	AddEventHandler("onLaundryFinished", function(money)
-		ESX.Game.SpawnObject(GetHashKey("prop_poly_bag_money"), laundryCoords, function(obj)
-			ApplyForceToEntity(obj, 3, 1, 1, 1, 0, 0, 0, 0, false, true, true, false, true)
-			while true do
-				nearestPlayer = GetNearestPlayerToEntity(obj)
-				ped = GetPlayerPed(nearestPlayer)
-				if Vdist(GetEntityCoords(ped), GetEntityCoords(obj)) < 2 then
-					ESX.Game.DeleteObject(obj)
-					TriggerServerEvent("laundryFinished", GetPlayerServerId(nearestPlayer), money)
-					print("You have finished laundiring " .. money .. " money!!!") -- Ui
-					didPlayerStartLaunder = false
-				end
-				Wait(5)
-			end
+    AddEventHandler("pnp:onLaundryFinished", function()
+        ESX.Game.SpawnObject(GetHashKey("prop_poly_bag_money"), Config.Location, function(obj)
+        ApplyForceToEntity(obj, 3, 1, 1, 1, 0, 0, 0, 0, false, true, true, false, true)
+		trackForPickup(obj)
 		end)
-	end)
+    end)
 end)
 
-Citizen.CreateThread(function()
+-- Tracks for pickup of the spawned object(a money bag)
+function trackForPickup(obj)
 	while true do
-		pedCoords = GetEntityCoords(PlayerPedId())
-		distance = Vdist(pedCoords, laundryCoords)
-
-		--This logic could be better
-		if (type(laundryString) == "number" 
-		and tonumber(laundryString) >= Config.TimeToLaunder) then
-			laundryString = Config.LaundryString
+		nearestPlayer = GetNearestPlayerToEntity(obj)
+		ped = GetPlayerPed(nearestPlayer)
+		if Vdist(GetEntityCoords(ped), GetEntityCoords(obj)) < 1.2 then
+			ESX.Game.DeleteObject(obj)
+			TriggerServerEvent("pnp:onMoneyPickup", GetPlayerServerId(nearestPlayer))
+            break
 		end
-
-		if distance < Config.Distance then
-			draw3DText(laundryCoords.x,
-				laundryCoords.y,
-				laundryCoords.z,
-				laundryString, 0.4)
-			isNear = true
-		else
-			isNear = false
-			hasSoundPlayed = false
-		end
-
-		Wait(5)
+		Wait(50)
 	end
-end)
+end
 
+-- Tracks for a player's coords and it's distance to the laundry
 Citizen.CreateThread(function()
-	while true do
-		if isNear and IsControlJustPressed(0, 38) then
-			if(didPlayerStartLaunder) then
-				return
-			end
-			
-			local inventory = ESX.GetPlayerData().inventory
-			local amountOfDirtyMoney = 0
-
-			--local item = PlayerData.getInventoryItem("black_money")
-
-			for i, v in ipairs(inventory) do
-				if(v == GetHashKey("black_money")) then
-					amountOfDirtyMoney = amountOfDirtyMoney + 1
-				end
-			end
-			
-			didPlayerStartLaunder = true
-			TriggerServerEvent("onServerLaundry", PlayerPedId())
-			hasLaundryStarted = true
-		end
-
-		if isNear and not hasSoundPlayed and not hasLaundryStarted then
-			PlaySound(-1, "Menu_Accept", "Phone_SoundSet_Default", 1)
-			hasSoundPlayed = true
-		end
-
-		Wait(10)
-	end
+    while true do
+        playerCoords = GetEntityCoords(PlayerPedId())
+        distanceToLaundry = Vdist(playerCoords, Config.Location)
+        Wait(200)
+    end
 end)
 
--- Draws a 3D text over a vertain location (Can be used as a 3D text boilerplate)
-function draw3DText(x, y, z, text, scale)
+-- Shows a prompt for the laundry
+Citizen.CreateThread(function()
+    laundryPrompt = _U("laundry_prompt")
+    while true do
+        if distanceToLaundry < 1 then
+            draw3DText(laundryX, laundryY, laundryZ, laundryPrompt, 0.6)
+            if(IsControlJustPressed(0, 38)) then -- button E
+                TriggerServerEvent("pnp:startLaundry", PlayerPedId())
+            end
+        end
+        Wait(5)
+    end
+end)
+
+-- Draws a 3D text on specific coordinates
+function draw3DText(x, y, z, string, scale)
 	local onScreen, xCoord, yCoord = GetScreenCoordFromWorldCoord(x, y, z)
 	local pX, pY, pZ = table.unpack(GetGameplayCamCoords())
 	SetTextScale(scale, scale)
@@ -143,29 +97,13 @@ function draw3DText(x, y, z, text, scale)
 	BeginTextCommandDisplayText("STRING")
 	SetTextCentre(true)
 	SetTextColour(255, 255, 255, 255)
-	AddTextComponentSubstringPlayerName(text)
+	AddTextComponentSubstringPlayerName(string)
 	EndTextCommandDisplayText(xCoord, yCoord)
 end
 
-
-function GetClosestPlayer()
-    local players = GetPlayers()
-    local closestDistance = -1
-    local closestPlayer = -1
-    local ply = GetPlayerPed(-1)
-    local plyCoords = GetEntityCoords(ply, 0)
-
-    for index,value in ipairs(players) do
-        local target = GetPlayerPed(value)
-        if(target ~= ply) then
-            local targetCoords = GetEntityCoords(GetPlayerPed(value), 0)
-            local distance = GetDistanceBetweenCoords(targetCoords['x'], targetCoords['y'], targetCoords['z'], plyCoords['x'], plyCoords['y'], plyCoords['z'], true)
-            if(closestDistance == -1 or closestDistance > distance) then
-                closestPlayer = value
-                closestDistance = distance
-            end
-        end
-    end
-
-    return closestPlayer, closestDistance
+-- Shows a notification over the map
+function notifyPlayer(string)
+    SetNotificationTextEntry("STRING")
+    AddTextComponentSubstringPlayerName(string)
+    DrawNotification(true, false)
 end
