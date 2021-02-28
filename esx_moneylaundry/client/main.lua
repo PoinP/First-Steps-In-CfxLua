@@ -36,7 +36,6 @@ end)
 RegisterNetEvent("pnp:updatePrompt")
 AddEventHandler("pnp:updatePrompt", function(updatedPrompt)
     laundryPrompt = updatedPrompt
-    print(laundryPrompt)
 end)
 
 -- Spawns an object(a money bag)
@@ -55,7 +54,7 @@ function trackForPickup(obj)
 	while true do
 		nearestPlayer = GetNearestPlayerToEntity(obj)
 		ped = GetPlayerPed(nearestPlayer)
-		if Vdist(GetEntityCoords(ped), GetEntityCoords(obj)) < 1.2 then
+		if Vdist(GetEntityCoords(ped), GetEntityCoords(obj)) < 1.5 then
 			ESX.Game.DeleteObject(obj)
 			TriggerServerEvent("pnp:onMoneyPickup", GetPlayerServerId(nearestPlayer))
             break
