@@ -79,7 +79,7 @@ Citizen.CreateThread(function()
         if distanceToLaundry < 1 then
             draw3DText(laundryX, laundryY, laundryZ, laundryPrompt, 0.6)
             if(IsControlJustPressed(0, 38)) then -- button E
-                TriggerServerEvent("pnp:startLaundry", PlayerPedId())
+                TriggerServerEvent("pnp:startLaundry", GetClockHours())
             end
         end
         Wait(5)

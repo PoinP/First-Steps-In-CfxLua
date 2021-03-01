@@ -10,13 +10,20 @@ local moneyToLaunder = 0
 -- Laundry's logic
 RegisterNetEvent("pnp:startLaundry")
 Citizen.CreateThread(function()
-    AddEventHandler("pnp:startLaundry", function()
+    AddEventHandler("pnp:startLaundry", function(inGameTime)        
+        if Config.ActiveTime.Enabled and not isLaundryWorking(inGameTime) then
+            TriggerClientEvent("pnp:notifyPlayer", source, _U("not_working"))
+            TriggerClientEvent("pnp:notifyPlayer", source, _U("come_back", Config.ActiveTime.OpenTime, Config.ActiveTime.CloseTime))
+            return
+        end
+
         xPlayer = ESX.GetPlayerFromId(source)
         local blackMoney = xPlayer.getAccount("black_money").money
 
         moneyToLaunder = blackMoney > Config.MaxMoneyPerLaundry and Config.MaxMoneyPerLaundry or blackMoney
 
         if not hasLaundryStarted and moneyToLaunder > 0 then
+            TriggerEvent("pnp:addLog","esx_moneylaundry", GetPlayerName(source) .. " has started laundering " .. moneyToLaunder .. " dirty money!")
             TriggerClientEvent("pnp:notifyPlayer", source, _U("started_washing", moneyToLaunder))
             startLaundry(source)
         elseif moneyToLaunder <= 0 then
@@ -32,8 +39,27 @@ RegisterNetEvent("pnp:onMoneyPickup")
 AddEventHandler("pnp:onMoneyPickup", function(pedId)
     xPlayer = ESX.GetPlayerFromId(pedId)
     local cleanMoney = calculateMoneyAfterTax(moneyToLaunder, Config.Tax)
+    TriggerEvent("pnp:addLog", "esx_moneylaundry", GetPlayerName(pedId) .. " picked up " .. GetPlayerName(source) .. "'s " .. cleanMoney .. " laundered money!")
     TriggerClientEvent("pnp:notifyPlayer", pedId, _U("picked_up", cleanMoney))
     xPlayer.addMoney(cleanMoney)
+end)
+
+-- Logs Events
+AddEventHandler("pnp:addLog", function(scriptName, log)
+    if Config.Logging.Enabled then
+        if Config.Logging.Console then
+            print("^5" .. scriptName .. ": ^7" .. log)
+        end
+
+        local date = os.date("*t", os.time())
+        local fileName = scriptName .. "_" .. date.day .. "_" .. date.month .. "_" .. date.year .. ".txt"
+        local logFile = io.open(Config.Logging.Directory .. fileName, "a")
+        local log = "[" .. date.hour .. ":" .. date.min .. ":" .. date.sec .. "] " .. log
+
+        io.output(logFile)
+        io.write(log .. "\n")
+        io.close(logFile)
+    end
 end)
 
 -- Calculates the amount of clean money to give to a player
@@ -61,4 +87,15 @@ function startLaundry(source)
     TriggerClientEvent("pnp:notifyPlayer", source, _U("finished"))
 
     hasLaundryStarted = false
+end
+
+function isLaundryWorking(inGameTime)
+    local openTime = Config.ActiveTime.OpenTime
+    local closeTime = Config.ActiveTime.CloseTime
+    
+    if(openTime < closeTime) then
+        return openTime <= inGameTime and inGameTime <= closeTime
+    else
+        return not(closeTime < inGameTime and inGameTime < openTime)
+    end
 end
