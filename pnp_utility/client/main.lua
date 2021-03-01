@@ -20,6 +20,6 @@ Citizen.CreateThread(function()
         AddTextComponentString("~y~ID: ~s~" .. GetPlayerServerId(PlayerId()))
         DrawText(0.175, 0.95)
 
-        Wait(10)
+        Wait(5)
     end
 end)
