@@ -3,7 +3,7 @@ game 'gta5'
 
 author 'PoinP'
 description 'Personal script full of utilities'
-version '1.0.0'
+version '1.5.0'
 
 client_scripts{
 	'config.lua',
