@@ -3,7 +3,7 @@ fx_version 'cerulean'
 game 'gta5'
 
 author 'PoinP'
-version "1.2.2"
+version "1.2.5"
 description 'A simple moneylaundry script.'
 
 server_scripts {

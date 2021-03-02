@@ -23,7 +23,7 @@ Citizen.CreateThread(function()
         moneyToLaunder = blackMoney > Config.MaxMoneyPerLaundry and Config.MaxMoneyPerLaundry or blackMoney
 
         if not hasLaundryStarted and moneyToLaunder > 0 then
-            TriggerEvent("pnp:addLog","esx_moneylaundry", GetPlayerName(source) .. " has started laundering " .. moneyToLaunder .. " dirty money!")
+            TriggerEvent("pnp:addLog", source,"esx_moneylaundry", GetPlayerName(source) .. " has started laundering " .. moneyToLaunder .. " dirty money!")
             TriggerClientEvent("pnp:notifyPlayer", source, _U("started_washing", moneyToLaunder))
             startLaundry(source)
         elseif moneyToLaunder <= 0 then
@@ -39,7 +39,7 @@ RegisterNetEvent("pnp:onMoneyPickup")
 AddEventHandler("pnp:onMoneyPickup", function(pedId)
     xPlayer = ESX.GetPlayerFromId(pedId)
     local cleanMoney = calculateMoneyAfterTax(moneyToLaunder, Config.Tax)
-    TriggerEvent("pnp:addLog", "esx_moneylaundry", GetPlayerName(pedId) .. " picked up " .. GetPlayerName(source) .. "'s " .. cleanMoney .. " laundered money!")
+    TriggerEvent("pnp:addLog", pedId, "esx_moneylaundry", GetPlayerName(pedId) .. " picked up " .. GetPlayerName(source) .. "'s " .. cleanMoney .. " laundered money!")
     TriggerClientEvent("pnp:notifyPlayer", pedId, _U("picked_up", cleanMoney))
     xPlayer.addMoney(cleanMoney)
 end)
