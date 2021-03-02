@@ -11,7 +11,7 @@ Config.Tax = 30 -- % Percent
 Config.MaxMoneyPerLaundry = 1000
 
 Config.ActiveTime = {
-    Enabled = true,
+    Enabled = false,
     OpenTime = 6, -- Laundry opens at 06:00
     CloseTime = 2 -- Laundry closes at 02:00
 }
