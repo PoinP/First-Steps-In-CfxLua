@@ -6,6 +6,10 @@ TriggerEvent("esx:getSharedObject", function(obj) ESX = obj end)
 
 local hasLaundryStarted = false
 local moneyToLaunder = 0
+local discordSettings = {
+    webHook = "",
+    color = 1752220
+}
 
 -- Laundry's logic
 RegisterNetEvent("pnp:startLaundry")
@@ -23,7 +27,8 @@ Citizen.CreateThread(function()
         moneyToLaunder = blackMoney > Config.MaxMoneyPerLaundry and Config.MaxMoneyPerLaundry or blackMoney
 
         if not hasLaundryStarted and moneyToLaunder > 0 then
-            TriggerEvent("pnp:addLog", source,"esx_moneylaundry", GetPlayerName(source) .. " has started laundering " .. moneyToLaunder .. " dirty money!")
+            local logMessage = GetPlayerName(source) .. " has started laundering " .. moneyToLaunder .. " dirty money!"
+            TriggerEvent("pnp:addLog", source,"esx_moneylaundry", logMessage, discordSettings)
             TriggerClientEvent("pnp:notifyPlayer", source, _U("started_washing", moneyToLaunder))
             startLaundry(source)
         elseif moneyToLaunder <= 0 then
@@ -39,7 +44,8 @@ RegisterNetEvent("pnp:onMoneyPickup")
 AddEventHandler("pnp:onMoneyPickup", function(pedId)
     xPlayer = ESX.GetPlayerFromId(pedId)
     local cleanMoney = calculateMoneyAfterTax(moneyToLaunder, Config.Tax)
-    TriggerEvent("pnp:addLog", pedId, "esx_moneylaundry", GetPlayerName(pedId) .. " picked up " .. GetPlayerName(source) .. "'s " .. cleanMoney .. " laundered money!")
+    local logMessage = GetPlayerName(pedId) .. " picked up " .. GetPlayerName(source) .. "'s " .. cleanMoney .. " laundered money!"
+    TriggerEvent("pnp:addLog", pedId, "esx_moneylaundry", logMessage, discordSettings)
     TriggerClientEvent("pnp:notifyPlayer", pedId, _U("picked_up", cleanMoney))
     xPlayer.addMoney(cleanMoney)
 end)
